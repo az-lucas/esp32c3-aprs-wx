@@ -11,6 +11,14 @@
 // yet". Read by WebUI to show time-until-next-report.
 unsigned long g_lastSendMillis = 0;
 
+// True once the system clock holds a plausible real-world time (i.e. NTP
+// has actually responded), rather than the default epoch (1970-01-01)
+// that time() returns before that. Building an APRS timestamp before this
+// is true would publish a bogus date (e.g. "010000z").
+static bool timeIsSynced() {
+    return time(nullptr) > 1700000000; // 2023-11-14, well before any real use
+}
+
 // Prints the low-level WiFi disconnect reason code from the ESP-IDF WiFi
 // driver. This is much more specific than WiFi.status() (WL_DISCONNECTED
 // etc.) and usually pinpoints the real cause (wrong password, PMF
@@ -156,7 +164,22 @@ static bool wifiConnect() {
     if (WiFi.status() == WL_CONNECTED) {
         Serial.print(F("WiFi conectado. Endereco IP local: http://"));
         Serial.println(WiFi.localIP());
+
         configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+        Serial.print(F("Sincronizando horario (NTP)"));
+        unsigned long ntpStart = millis();
+        while (!timeIsSynced() && millis() - ntpStart < 10000) {
+            delay(250);
+            Serial.print('.');
+        }
+        Serial.println();
+        if (timeIsSynced()) {
+            Serial.println(F("Horario sincronizado."));
+        } else {
+            Serial.println(F("Aviso: horario ainda nao sincronizado (sem resposta do"));
+            Serial.println(F("servidor NTP); pacotes enviados antes da sincronizacao"));
+            Serial.println(F("serao adiados para evitar data/hora incorreta no APRS."));
+        }
         return true;
     }
 
@@ -241,6 +264,16 @@ static void wizardLocation() {
             Serial.println(F("WiFi nao conectado; nao e possivel enviar posicao agora."));
             Serial.println(F("Configure o WiFi primeiro."));
             return;
+        }
+
+        if (!timeIsSynced()) {
+            Serial.print(F("Aguardando sincronizacao de horario (NTP)"));
+            unsigned long ntpStart = millis();
+            while (!timeIsSynced() && millis() - ntpStart < 5000) {
+                delay(250);
+                Serial.print('.');
+            }
+            Serial.println();
         }
 
         Serial.println(F("Lendo sensor e enviando posicao para a rede APRS-IS..."));
@@ -420,6 +453,14 @@ void loop() {
     unsigned long intervalMs = (unsigned long)cfg.intervalMinutes * 60000UL;
     unsigned long now = millis();
     bool due = (g_lastSendMillis == 0) || (now - g_lastSendMillis >= intervalMs);
+
+    // Never build a packet before the clock is synced (NTP): the
+    // timestamp would default to the 1970 epoch (e.g. "010000z"). Leaving
+    // g_lastSendMillis untouched means we simply retry on the next loop
+    // iteration instead of losing this report cycle.
+    if (due && !timeIsSynced()) {
+        due = false;
+    }
 
     if (due && WiFi.status() == WL_CONNECTED) {
         bool sensorValid = sensorRead();
