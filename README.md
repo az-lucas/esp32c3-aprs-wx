@@ -79,3 +79,28 @@ wizard only runs again after a factory reset.
   position tracking, but the affected weather field(s) are marked
   unavailable rather than publishing bad data. Diagnostics (including an
   I2C bus scan and chip ID) are printed on serial if no sensor is found.
+
+## Debugging: watching raw packets
+
+`aprs.fi` can lag behind or cache what it shows. To see exactly what's
+hitting the APRS-IS network in real time, connect straight to a server
+with `nc` (built into macOS/Linux, no extra tooling) and log in
+read-only:
+
+```bash
+nc rotate.aprs2.net 14580
+```
+
+Once connected, send a login line filtered to your station's area
+(replace `YOURCALL-13` and the filter coordinates with your own — the
+example below is centered on Brasília with a 150km radius):
+
+```
+user YOURCALL-13 pass -1 vers nc 1.0 filter r/-15.7801/-47.9292/150
+```
+
+`pass -1` is the standard "read-only" passcode — no real passcode needed
+since you're only monitoring, not injecting. The `filter r/lat/lon/km`
+clause limits the firehose to packets within that radius, so you mostly
+see your own station (and nearby ones) instead of the entire network.
+Press Ctrl+C to disconnect.
