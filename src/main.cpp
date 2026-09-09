@@ -346,6 +346,38 @@ static void wizardInterval() {
     Serial.println(F(" minutos."));
 }
 
+static void wizardComment() {
+    Serial.println();
+    Serial.println(F("=== Comentario da estacao ==="));
+    Serial.print(F("Texto livre anexado ao final de cada pacote meteorologico "));
+    Serial.print(F("(maximo "));
+    Serial.print(COMMENT_MAX_LEN);
+    Serial.println(F(" caracteres, deixe em branco para remover):"));
+    String c = readLine();
+    // Strip quotes/backslashes so the comment can't break the JSON on the
+    // local status page; APRS itself doesn't care, but this is cheap.
+    String sanitized = "";
+    for (size_t i = 0; i < c.length(); i++) {
+        char ch = c[i];
+        if (ch != '"' && ch != '\\') {
+            sanitized += ch;
+        }
+    }
+    if (sanitized.length() > COMMENT_MAX_LEN) {
+        sanitized = sanitized.substring(0, COMMENT_MAX_LEN);
+        Serial.println(F("Texto truncado para caber no limite."));
+    }
+    cfg.comment = sanitized;
+    configSave();
+    if (cfg.comment.length() > 0) {
+        Serial.print(F("Comentario configurado: \""));
+        Serial.print(cfg.comment);
+        Serial.println(F("\""));
+    } else {
+        Serial.println(F("Comentario removido."));
+    }
+}
+
 static void printConfig() {
     Serial.println();
     Serial.println(F("=== Configuracao atual ==="));
@@ -369,6 +401,9 @@ static void printConfig() {
     Serial.print(F("Intervalo de envio: "));
     Serial.print(cfg.intervalMinutes);
     Serial.println(F(" min"));
+    Serial.print(F("Comentario: \""));
+    Serial.print(cfg.comment);
+    Serial.println(F("\""));
     if (WiFi.status() == WL_CONNECTED) {
         Serial.print(F("IP local: http://"));
         Serial.println(WiFi.localIP());
@@ -386,6 +421,7 @@ static void configMenu() {
         Serial.println(F("4 - Intervalo de envio"));
         Serial.println(F("5 - Mostrar configuracao atual"));
         Serial.println(F("6 - Restaurar configuracao de fabrica"));
+        Serial.println(F("7 - Comentario da estacao"));
         Serial.println(F("0 - Sair do menu"));
         Serial.print(F("Opcao: "));
         String opt = readLine();
@@ -395,6 +431,7 @@ static void configMenu() {
         else if (opt == "3") wizardLocation();
         else if (opt == "4") wizardInterval();
         else if (opt == "5") printConfig();
+        else if (opt == "7") wizardComment();
         else if (opt == "6") {
             Serial.print(F("Tem certeza? Isso apaga toda a configuracao. (s/n): "));
             String r = readLine();

@@ -16,7 +16,11 @@ struct Config {
     float altitudeMeters = 0.0f; // station elevation above sea level
     bool locationConfirmed = false;
     uint16_t intervalMinutes = 15; // minimum 15
+    String comment = ""; // optional free text appended to each weather packet
 };
+
+// Max length for `comment`, to keep the APRS packet a reasonable size.
+static const size_t COMMENT_MAX_LEN = 40;
 
 extern Config cfg;
 

@@ -95,7 +95,12 @@ String aprsBuildWeatherPacket(bool sensorValid, bool humidityAvailable, float te
     snprintf(buf, sizeof(buf),
              "@%sz%s/%s_.../...g...t%sr...p...P...h%sb%s",
              timeStr, latStr.c_str(), lonStr.c_str(), tempField, humField, pressField);
-    return String(buf);
+
+    String packet(buf);
+    if (cfg.comment.length() > 0) {
+        packet += " " + cfg.comment;
+    }
+    return packet;
 }
 
 bool aprsSendWeatherReport(bool sensorValid, bool humidityAvailable, float tempC, float humidityPct, float pressureHpa) {

@@ -47,6 +47,7 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(
   <div class="row"><span class="label">Localizacao</span><span class="val" id="loc">--</span></div>
   <div class="row"><span class="label">Altitude</span><span class="val" id="altitude">--</span></div>
   <div class="row"><span class="label">Intervalo de envio</span><span class="val" id="interval">--</span></div>
+  <div class="row"><span class="label">Comentario</span><span class="val" id="comment">--</span></div>
   <div class="row"><span class="label">Endereco IP</span><span class="val" id="ip">--</span></div>
 </div>
 
@@ -75,6 +76,7 @@ async function refresh() {
     document.getElementById('loc').textContent = d.lat.toFixed(5) + ', ' + d.lon.toFixed(5) + (d.locationConfirmed ? ' (confirmada)' : ' (nao confirmada)');
     document.getElementById('altitude').textContent = d.altitudeMeters.toFixed(1) + ' m';
     document.getElementById('interval').textContent = d.intervalMinutes + ' min';
+    document.getElementById('comment').textContent = d.comment || '(nenhum)';
     document.getElementById('ip').textContent = d.ip;
     document.getElementById('lastSend').textContent = d.lastSendSecAgo >= 0 ? (d.lastSendSecAgo + ' s atras') : 'nunca';
     document.getElementById('nextSend').textContent = d.nextSendInSec + ' s';
@@ -120,6 +122,7 @@ static void handleData() {
     json += "\"altitudeMeters\":" + String(cfg.altitudeMeters, 1) + ",";
     json += "\"locationConfirmed\":" + String(cfg.locationConfirmed ? "true" : "false") + ",";
     json += "\"intervalMinutes\":" + String(cfg.intervalMinutes) + ",";
+    json += "\"comment\":\"" + cfg.comment + "\",";
     json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
     json += "\"lastSendSecAgo\":" + String(lastSendSecAgo) + ",";
     json += "\"nextSendInSec\":" + String(nextSendInSec) + ",";
