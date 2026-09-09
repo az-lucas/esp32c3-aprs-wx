@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <time.h>
 
 #include "Config.h"
@@ -28,6 +29,17 @@ static void onWifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
     if (event != ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
         return;
     }
+    // The ESP-IDF WiFi driver can retry very rapidly on its own when the
+    // AP keeps rejecting it, which would otherwise flood the serial
+    // console (and make the interactive config menu unusable) with one
+    // line per attempt. Print at most one of these every 3 seconds.
+    static unsigned long lastPrint = 0;
+    unsigned long now = millis();
+    if (now - lastPrint < 3000) {
+        return;
+    }
+    lastPrint = now;
+
     uint8_t reason = info.wifi_sta_disconnected.reason;
     Serial.print(F("  [WiFi] desconectado, codigo "));
     Serial.print(reason);
@@ -145,12 +157,23 @@ static bool wifiConnect() {
     Serial.print(F("\" "));
 
     WiFi.mode(WIFI_STA);
-    // Modem-sleep (WiFi power saving) is on by default on the ESP32 and is
-    // a well-known cause of repeated auth/handshake timeouts with some
-    // routers: the radio powers down between beacons and can miss timing-
-    // critical frames during association. Disabling it fixes exactly the
-    // "auth expire" / "timeout" disconnect loop we were seeing.
-    WiFi.setSleep(false);
+    // This specific board's radio reliably fails to authenticate at full
+    // TX power (19.5dBm) - a controlled test showed 0/23 successes at max
+    // power vs. 25/25 at every reduced level tried. Run at a lower power;
+    // with a router this close it still gives excellent RSSI margin.
+    WiFi.setTxPower(WIFI_POWER_15dBm);
+    // The ESP-IDF driver retries connecting on its own in the background
+    // by default. With a flaky link that mostly fails, that produces a
+    // near-continuous stream of disconnect events regardless of what the
+    // sketch is doing (including blocking the serial console while inside
+    // the config menu). Disable it and rely solely on our own throttled
+    // reconnect check in loop().
+    WiFi.setAutoReconnect(false);
+    // Modem-sleep stays at its default (enabled): disabling it was tried
+    // while chasing a connection instability that turned out to be
+    // unrelated (it didn't fix the minimal repro either), and keeping the
+    // radio always-on noticeably increases power draw and heat for no
+    // proven benefit.
     WiFi.begin(cfg.wifiSsid.c_str(), cfg.wifiPass.c_str());
 
     int attempts = 0;
