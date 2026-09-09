@@ -2,8 +2,18 @@
 
 #include <Arduino.h>
 
-// APRS-IS server used to inject packets into the APRS network.
-static const char *APRS_SERVER = "rotate.aprs2.net";
+// APRS-IS server used to inject packets into the APRS network. Pick the
+// pool closest to the station to minimize latency/hops; every APRS-IS
+// server relays packets to the whole global network regardless of which
+// one you connect to, so this only affects your own link quality, not
+// who can see your packets. See the README for more on this.
+static const char *APRS_SERVER = "brazil.aprs2.net"; // Brazil (PY/PP/PQ/PR/PS/PT/PU/PV/PW/PX/ZW/ZX/ZY/ZZ stations)
+// static const char *APRS_SERVER = "rotate.aprs2.net"; // Global rotate - any available Tier 2 server worldwide
+// static const char *APRS_SERVER = "soam.aprs2.net";   // South America (wider net than Brazil alone)
+// static const char *APRS_SERVER = "noam.aprs2.net";   // North America
+// static const char *APRS_SERVER = "euro.aprs2.net";   // Europe
+// static const char *APRS_SERVER = "asia.aprs2.net";   // Asia
+// static const char *APRS_SERVER = "aunz.aprs2.net";   // Australia / New Zealand
 static const uint16_t APRS_PORT = 14580;
 
 // Last packet sent, kept around for display on the local web page.

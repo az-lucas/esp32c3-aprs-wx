@@ -332,13 +332,13 @@ static void wizardInterval() {
     Serial.println();
     Serial.println(F("=== Intervalo de envio ==="));
     while (true) {
-        Serial.print(F("Intervalo entre envios em minutos (minimo 15): "));
+        Serial.print(F("Intervalo entre envios em minutos (minimo 5): "));
         int v = readLine().toInt();
-        if (v >= 15) {
+        if (v >= 5) {
             cfg.intervalMinutes = (uint16_t)v;
             break;
         }
-        Serial.println(F("Valor invalido: o intervalo minimo e 15 minutos."));
+        Serial.println(F("Valor invalido: o intervalo minimo e 5 minutos."));
     }
     configSave();
     Serial.print(F("Intervalo configurado: "));

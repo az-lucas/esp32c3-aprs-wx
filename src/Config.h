@@ -15,12 +15,17 @@ struct Config {
     float lon = 0.0f;
     float altitudeMeters = 0.0f; // station elevation above sea level
     bool locationConfirmed = false;
-    uint16_t intervalMinutes = 15; // minimum 15
+    uint16_t intervalMinutes = 15; // minimum 5
     String comment = ""; // optional free text appended to each weather packet
 };
 
 // Max length for `comment`, to keep the APRS packet a reasonable size.
 static const size_t COMMENT_MAX_LEN = 40;
+
+// Default station comment on a fresh/never-configured device, so packets
+// sent before the project is finished are clearly marked as such. Change
+// or clear it via the "config" serial menu (option 7) at any time.
+static const char *DEFAULT_COMMENT = "Projeto em teste e desenvolvimento";
 
 extern Config cfg;
 

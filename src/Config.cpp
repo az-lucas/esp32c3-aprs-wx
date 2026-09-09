@@ -17,7 +17,7 @@ void configLoad() {
     cfg.altitudeMeters = prefs.getFloat("alt", 0.0f);
     cfg.locationConfirmed = prefs.getBool("locok", false);
     cfg.intervalMinutes = prefs.getUShort("interval", 15);
-    cfg.comment = prefs.getString("comment", "");
+    cfg.comment = prefs.getString("comment", DEFAULT_COMMENT);
     prefs.end();
 }
 

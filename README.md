@@ -63,7 +63,7 @@ console serial:
    bruta sozinha faz uma estação em altitude parecer artificialmente
    "baixa" comparada às vizinhas).
 4. **Intervalo de envio** — de quanto em quanto tempo (em minutos) os
-   dados do sensor são mandados para o APRS-IS. Mínimo 15 minutos.
+   dados do sensor são mandados para o APRS-IS. Mínimo 5 minutos.
 
 Tudo isso é salvo na flash (NVS) e sobrevive a queda de energia/reboot —
 o assistente só roda de novo depois de uma restauração de fábrica.
@@ -80,9 +80,10 @@ o assistente só roda de novo depois de uma restauração de fábrica.
   comentário da estação, ver configuração atual, ou restaurar de
   fábrica).
 - A cada intervalo configurado, o dispositivo lê o sensor e manda um
-  relatório meteorológico para o APRS-IS (`rotate.aprs2.net:14580`)
-  usando o algoritmo padrão e público de passcode do APRS-IS para o
-  indicativo configurado.
+  relatório meteorológico para o APRS-IS (`brazil.aprs2.net:14580` por
+  padrão — veja a seção abaixo sobre escolha de servidor) usando o
+  algoritmo padrão e público de passcode do APRS-IS para o indicativo
+  configurado.
 - Opcionalmente, um texto livre (comentário da estação, configurável pelo
   menu `config`, opção 7) é anexado ao final de cada pacote meteorológico.
 - Se a leitura do sensor for inválida ou estiver fora de uma faixa
@@ -92,6 +93,25 @@ o assistente só roda de novo depois de uma restauração de fábrica.
   indisponíveis em vez de publicar dado ruim. Diagnósticos (incluindo um
   scan do barramento I2C e o ID do chip) são impressos no serial se
   nenhum sensor for encontrado.
+
+### Escolha do servidor APRS-IS
+
+Por padrão, o firmware injeta pacotes em `brazil.aprs2.net`, o pool de
+servidores Tier 2 da rede APRS2 dedicado ao Brasil. Qualquer servidor
+APRS-IS repassa seus pacotes para a rede inteira, então isso não afeta
+quem consegue ver sua estação — só a qualidade/latência da sua própria
+conexão. Outras opções ficam comentadas em `src/AprsIS.h`, caso queira
+trocar:
+
+| Servidor              | Regiao                          |
+|------------------------|----------------------------------|
+| `brazil.aprs2.net` *(padrão)* | Brasil                     |
+| `rotate.aprs2.net`     | Rotativo global (qualquer servidor Tier 2 do mundo) |
+| `soam.aprs2.net`       | America do Sul (mais abrangente que so o Brasil)   |
+| `noam.aprs2.net`       | America do Norte                 |
+| `euro.aprs2.net`       | Europa                           |
+| `asia.aprs2.net`       | Asia                             |
+| `aunz.aprs2.net`       | Australia / Nova Zelandia         |
 
 ### Nota sobre potência de transmissão WiFi
 
@@ -112,9 +132,10 @@ servidor com `nc` (já vem no macOS/Linux, sem instalar nada) e faça login
 somente leitura:
 
 ```bash
-nc rotate.aprs2.net 14580
+nc brazil.aprs2.net 14580
 ```
 
+(troque pelo servidor da sua região, se preferir — veja a tabela acima).
 Depois de conectar, mande a linha de login filtrada pela área da sua
 estação (troque `SEUINDICATIVO-13` e as coordenadas do filtro pelas suas
 — o exemplo abaixo está centrado em Brasília com raio de 150km):
@@ -189,7 +210,7 @@ console:
    this is what aprs.fi and other weather maps expect (raw pressure alone
    makes a station at altitude look artificially "low" vs. its neighbors).
 4. **Report interval** — how often (in minutes) sensor data is sent to
-   APRS-IS. Minimum 15 minutes.
+   APRS-IS. Minimum 5 minutes.
 
 All of this is saved to flash (NVS) and survives power loss/reboot — the
 wizard only runs again after a factory reset.
@@ -204,9 +225,9 @@ wizard only runs again after a factory reset.
   configuration menu (change callsign, WiFi, location, interval, station
   comment, view current config, or factory reset).
 - Every configured interval, the device reads the sensor and sends a
-  weather report to APRS-IS (`rotate.aprs2.net:14580`) using the
-  standard, well-known APRS-IS passcode algorithm for the configured
-  callsign.
+  weather report to APRS-IS (`brazil.aprs2.net:14580` by default — see
+  the server choice section below) using the standard, well-known
+  APRS-IS passcode algorithm for the configured callsign.
 - Optionally, a free-text station comment (configurable via the `config`
   menu, option 7) is appended to the end of every weather packet.
 - If the sensor read is invalid or out of a physically plausible range
@@ -214,6 +235,25 @@ wizard only runs again after a factory reset.
   position tracking, but the affected weather field(s) are marked
   unavailable rather than publishing bad data. Diagnostics (including an
   I2C bus scan and chip ID) are printed on serial if no sensor is found.
+
+### APRS-IS server choice
+
+By default the firmware injects packets into `brazil.aprs2.net`, the
+APRS2 network's Tier 2 server pool dedicated to Brazil. Any APRS-IS
+server relays your packets to the whole network, so this doesn't affect
+who can see your station - only your own connection's quality/latency.
+Other options are left commented out in `src/AprsIS.h` if you want to
+switch:
+
+| Server                 | Region                            |
+|------------------------|------------------------------------|
+| `brazil.aprs2.net` *(default)* | Brazil                     |
+| `rotate.aprs2.net`     | Global rotate (any Tier 2 server worldwide) |
+| `soam.aprs2.net`       | South America (wider than Brazil alone)     |
+| `noam.aprs2.net`       | North America                      |
+| `euro.aprs2.net`       | Europe                             |
+| `asia.aprs2.net`       | Asia                                |
+| `aunz.aprs2.net`       | Australia / New Zealand             |
 
 ### Note on WiFi TX power
 
@@ -234,9 +274,10 @@ with `nc` (built into macOS/Linux, no extra tooling) and log in
 read-only:
 
 ```bash
-nc rotate.aprs2.net 14580
+nc brazil.aprs2.net 14580
 ```
 
+(swap in your region's server if you prefer - see the table above).
 Once connected, send a login line filtered to your station's area
 (replace `YOURCALL-13` and the filter coordinates with your own — the
 example below is centered on Brasília with a 150km radius):
