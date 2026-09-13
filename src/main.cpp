@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include <esp_system.h>
 #include <time.h>
 
 #include "Config.h"
@@ -18,6 +19,32 @@ unsigned long g_lastSendMillis = 0;
 // is true would publish a bogus date (e.g. "010000z").
 static bool timeIsSynced() {
     return time(nullptr) > 1700000000; // 2023-11-14, well before any real use
+}
+
+// Prints why the chip last rebooted. Distinguishes a genuine power loss
+// (ESP_RST_POWERON) or a normal restart we asked for (ESP_RST_SW) from a
+// silent crash/hang recovery (ESP_RST_PANIC, ESP_RST_INT_WDT/TASK_WDT/WDT)
+// or a brownout (ESP_RST_BROWNOUT) - the "stops working after a while"
+// symptom could be any of these, and this tells us which on the next boot.
+static void printResetReason() {
+    esp_reset_reason_t reason = esp_reset_reason();
+    Serial.print(F("Motivo do ultimo reset: "));
+    switch (reason) {
+        case ESP_RST_UNKNOWN:  Serial.println(F("desconhecido (comum logo apos gravar via esptool)")); break;
+        case ESP_RST_POWERON:  Serial.println(F("ligou/energia aplicada (power-on)")); break;
+        case ESP_RST_EXT:      Serial.println(F("pino de reset externo")); break;
+        case ESP_RST_SW:       Serial.println(F("reset por software (ESP.restart())")); break;
+        case ESP_RST_PANIC:    Serial.println(F("PANIC / crash de software")); break;
+        case ESP_RST_INT_WDT:  Serial.println(F("watchdog de interrupcao (trava no codigo)")); break;
+        case ESP_RST_TASK_WDT: Serial.println(F("watchdog de tarefa (loop() travou sem ceder tempo)")); break;
+        case ESP_RST_WDT:      Serial.println(F("outro watchdog")); break;
+        case ESP_RST_BROWNOUT: Serial.println(F("brownout (queda de tensao/alimentacao insuficiente)")); break;
+        case ESP_RST_DEEPSLEEP: Serial.println(F("saida de deep sleep")); break;
+        default:
+            Serial.print(F("codigo "));
+            Serial.println((int)reason);
+            break;
+    }
 }
 
 // Prints the low-level WiFi disconnect reason code from the ESP-IDF WiFi
@@ -159,9 +186,13 @@ static bool wifiConnect() {
     WiFi.mode(WIFI_STA);
     // This specific board's radio reliably fails to authenticate at full
     // TX power (19.5dBm) - a controlled test showed 0/23 successes at max
-    // power vs. 25/25 at every reduced level tried. Run at a lower power;
-    // with a router this close it still gives excellent RSSI margin.
-    WiFi.setTxPower(WIFI_POWER_15dBm);
+    // power vs. 25/25 at every reduced level tried. The safety margin also
+    // turned out to be channel-dependent: 15dBm worked fine on channel 1
+    // but failed once the router hopped to channel 11 (8.5dBm still
+    // worked there). Since the AP can change channel on its own, run
+    // conservatively low - the router is close enough that RSSI stays
+    // excellent even here.
+    WiFi.setTxPower(WIFI_POWER_5dBm);
     // The ESP-IDF driver retries connecting on its own in the background
     // by default. With a flaky link that mostly fails, that produces a
     // near-continuous stream of disconnect events regardless of what the
@@ -467,6 +498,11 @@ void setup() {
     Serial.begin(115200);
     delay(2000); // allow native USB CDC to enumerate on ESP32-C3
 
+    printResetReason();
+    Serial.print(F("Heap livre no boot: "));
+    Serial.print(ESP.getFreeHeap());
+    Serial.println(F(" bytes"));
+
     WiFi.onEvent(onWifiEvent);
 
     configLoad();
@@ -501,6 +537,32 @@ void setup() {
 void loop() {
     webUiHandle();
     handleSerialIdle();
+
+    // Periodic health line: uptime, heap (current and worst-case-ever, to
+    // reveal a slow leak/fragmentation trend), WiFi status/RSSI. Meant to
+    // leave a trail leading up to whatever "stops working after a while"
+    // looks like next time it happens.
+    static unsigned long lastHealthLog = 0;
+    if (millis() - lastHealthLog > 60000) {
+        lastHealthLog = millis();
+        Serial.print(F("[saude] uptime="));
+        Serial.print(millis() / 1000);
+        Serial.print(F("s heap_livre="));
+        Serial.print(ESP.getFreeHeap());
+        Serial.print(F(" heap_min="));
+        Serial.print(ESP.getMinFreeHeap());
+        Serial.print(F(" wifi="));
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.print(F("conectado rssi="));
+            Serial.print(WiFi.RSSI());
+        } else {
+            Serial.print(F("desconectado status="));
+            Serial.print((int)WiFi.status());
+        }
+        Serial.print(F(" ultimo_envio_ha="));
+        Serial.print(g_lastSendMillis == 0 ? -1 : (long)((millis() - g_lastSendMillis) / 1000));
+        Serial.println(F("s"));
+    }
 
     if (WiFi.status() != WL_CONNECTED && cfg.wifiSsid.length() > 0) {
         static unsigned long lastReconnectAttempt = 0;
